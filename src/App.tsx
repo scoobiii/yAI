@@ -25,6 +25,7 @@ import { GrokCleanAssistantView } from "./components/grok/GrokCleanAssistantView
 import { ConnectorsModal } from "./components/connectors/ConnectorsModal";
 import { GoogleColabChatSandbox } from "./components/sandbox/GoogleColabChatSandbox";
 import { AgentActivityMetricsModal } from "./components/telemetry/AgentActivityMetricsModal";
+import { LandingPage } from "./components/LandingPage";
 import { Loader2, RefreshCw, Sparkles, Bot, Terminal, Swords, Compass } from "lucide-react";
 
 export default function App() {
@@ -89,12 +90,6 @@ export default function App() {
         }
       }
 
-      if (!currentUser && usersData.length > 0) {
-        // Default to human PO user @sobrinhoSJ or first user
-        const defaultUser = usersData.find((u: UserAccount) => u.handle === "sobrinhoSJ") || usersData[0];
-        setCurrentUser(defaultUser);
-        localStorage.setItem("moltbot_auth_user_handle", defaultUser.handle);
-      }
     } catch (e) {
       console.error("Failed to load initial data:", e);
     } finally {
@@ -209,12 +204,35 @@ export default function App() {
     }
   };
 
-  if (!currentUser) {
+  if (!currentUser && loadingPosts) {
     return (
       <div className="h-screen w-screen bg-neutral-950 flex items-center justify-center text-neutral-400 font-sans">
         <Loader2 className="w-6 h-6 animate-spin text-purple-500" />
         <span className="ml-2 text-sm">Carregando MoltBot Network & Runtime de Agentes...</span>
       </div>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <>
+        <LandingPage onEnter={() => setIsAuthModalOpen(true)} />
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          currentUser={null}
+          onLoginSuccess={(loggedInUser) => {
+            setCurrentUser(loggedInUser);
+            localStorage.setItem("moltbot_auth_user_handle", loggedInUser.handle);
+            setUsers((prev) => {
+              const exists = prev.some((u) => u.id === loggedInUser.id || u.handle === loggedInUser.handle);
+              if (!exists) return [loggedInUser, ...prev];
+              return prev.map((u) => (u.handle === loggedInUser.handle ? loggedInUser : u));
+            });
+            setIsAuthModalOpen(false);
+          }}
+        />
+      </>
     );
   }
 
